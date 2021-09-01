@@ -66,7 +66,32 @@ router.post("/", (req, res) => {
 // the request body and **returns the modified document**, not the original
 router.put("/:id", (req, res) => {
   const { title, contents } = req.body;
-  //if (!title || !contents)
+  Posts.findById(req.params.id)
+    .then((post) => {
+      if (!post) {
+        res
+          .status(404)
+          .json({ message: "The post with the specified ID does not exist" });
+      } else if (!title || !contents) {
+        res
+          .status(400)
+          .json({ message: "Please provide title and contents for the post" });
+      } else {
+        Posts.update(req.params.id, req.body)
+          .then(() => {
+            return Posts.findById(req.params.id);
+          })
+          .then((newPost) => {
+            res.status(200).json(newPost);
+          });
+      }
+    })
+    .catch((error) => {
+      console.log(error);
+      res
+        .status(500)
+        .json({ message: "The post information could not be retrieved" });
+    });
 });
 
 // 5. Removes the post with the specified id and returns the **deleted post object**
@@ -89,9 +114,25 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// 6. Returns an **array of all the comment objects** associated with the post with the specified id
-router.get("/:id/comments", (req, res) => {
-  res.send(`returns an array of comments`);
+// 6. Returns an **array of all the comment objects**
+// associated with the post with the specified id
+router.get("/:id/comments", async (req, res) => {
+  const post = await Posts.findById(req.params.id);
+  try {
+    if (!post) {
+      res
+        .status(404)
+        .json({ message: "The post with the specified ID does not exist" });
+    } else {
+      const comments = await Posts.findPostComments(req.params.id);
+      res.status(200).json(comments);
+    }
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      message: "The post information could not be retrieved",
+    });
+  }
 });
 
 module.exports = router;
